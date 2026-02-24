@@ -28,6 +28,7 @@ export const StudentDashboard = () => {
     { name: 'Team Player', description: 'Sports Category' },
     { name: 'Tech Master', description: 'Technical Excellence' },
   ];
+  //1234
 
   return (
     <div style={{ flex: 1, padding: 'var(--spacing-4)' }}>
