@@ -1,0 +1,194 @@
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './utils/AuthContext';
+import { ToastProvider } from './components/Toast';
+import './index.css';
+
+// Layouts
+import { DashboardLayout } from './layouts/DashboardLayout';
+
+// Components
+import { ProtectedRoute } from './components';
+
+// Lazy load pages
+const LandingPage = lazy(() => import('./pages/LandingPage').then(module => ({ default: module.LandingPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(module => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/RegisterPage').then(module => ({ default: module.RegisterPage })));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const AddAchievementPage = lazy(() => import('./pages/AddAchievementPage').then(module => ({ default: module.AddAchievementPage })));
+const ViewAchievementsPage = lazy(() => import('./pages/ViewAchievementsPage').then(module => ({ default: module.ViewAchievementsPage })));
+const StudentsPage = lazy(() => import('./pages/StudentsPage').then(module => ({ default: module.StudentsPage })));
+const ReportsPage = lazy(() => import('./pages/ReportsPage').then(module => ({ default: module.ReportsPage })));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(module => ({ default: module.AnalyticsPage })));
+const StudentDashboard = lazy(() => import('./pages/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
+
+// Loading Component
+const PageLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <div className="animate-glow" style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--primary)' }} />
+  </div>
+);
+
+const AppRoutes = () => {
+  const { user } = useAuth();
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <LoginPage />} />
+        <Route path="/register" element={user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <RegisterPage />} />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout title="Admin Dashboard">
+                <AdminDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/add-achievement"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout title="Add Achievement">
+                <AddAchievementPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/achievements"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout title="View Achievements">
+                <ViewAchievementsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/students"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout title="Student Database">
+                <StudentsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout title="System Reports">
+                <ReportsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DashboardLayout title="Analytics & Insights">
+                <AnalyticsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Student Routes */}
+        <Route
+          path="/student/dashboard"
+          element={
+            <ProtectedRoute requiredRole="student">
+              <DashboardLayout title="Student Dashboard">
+                <StudentDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/add-achievement"
+          element={
+            <ProtectedRoute requiredRole="student">
+              <DashboardLayout title="Add Achievement">
+                <AddAchievementPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/achievements"
+          element={
+            <ProtectedRoute requiredRole="student">
+              <DashboardLayout title="My Achievements">
+                <ViewAchievementsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/profile"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout title="My Profile">
+                <ProfilePage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Shared Routes */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout title="User Profile">
+                <ProfilePage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout title="Account Settings">
+                <SettingsPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+};
+
+import { ThemeProvider } from './utils/ThemeContext';
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;
