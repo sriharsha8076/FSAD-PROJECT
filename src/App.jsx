@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './utils/AuthContext';
 import { ToastProvider } from './components/Toast';
 import './index.css';
-
+// Member 1 - Harsha implemented routing structure
 // Layouts
 import { DashboardLayout } from './layouts/DashboardLayout';
 
