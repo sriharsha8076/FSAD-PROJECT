@@ -25,6 +25,7 @@ export const ProfilePage = () => {
     newPassword: '',
     photo: user?.photo || null,
   });
+  //123
 
   const hasChanges =
     formData.firstName !== initialFirstName ||
