@@ -5,6 +5,8 @@ import { mockAchievements } from '../data/mockData';
 import { Search, Filter, Download } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import { useToast } from '../components/Toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export const ViewAchievementsPage = () => {
   const { user } = useAuth();
@@ -15,6 +17,8 @@ export const ViewAchievementsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
   const [selectedAchievement, setSelectedAchievement] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   const categories = ['Sports', 'Technical', 'Cultural', 'Other'];
   const levels = ['Participation', 'College', 'State', 'National', 'International'];
@@ -30,6 +34,38 @@ export const ViewAchievementsPage = () => {
     const matchesLevel = selectedLevel === '' || achievement.level === selectedLevel;
     return matchesSearch && matchesCategory && matchesLevel;
   });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredAchievements.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedAchievements = filteredAchievements.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, selectedLevel]);
+
+  const handleDownloadPDF = async () => {
+    const certificateElement = document.getElementById('certificate-content');
+    if (!certificateElement) return;
+
+    addToast('Generating PDF certificate...', 'info');
+    try {
+      const canvas = await html2canvas(certificateElement, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('l', 'mm', 'a4'); // Landscape A4
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${selectedAchievement.studentName}_${selectedAchievement.activity}_Certificate.pdf`);
+      addToast('Certificate downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      addToast('Failed to generate PDF.', 'error');
+    }
+  };
 
   return (
     <div style={{ flex: 1, padding: 'var(--spacing-4)' }}>
@@ -156,7 +192,7 @@ export const ViewAchievementsPage = () => {
         style={{ marginBottom: 'var(--spacing-4)' }}
       >
         <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-          Showing <span style={{ color: 'var(--text-light)', fontWeight: '600' }}>{filteredAchievements.length}</span> achievements
+          Showing <span style={{ color: 'var(--text-light)', fontWeight: '600' }}>{paginatedAchievements.length}</span> of <span style={{ color: 'var(--text-light)', fontWeight: '600' }}>{filteredAchievements.length}</span> achievements
         </p>
       </motion.div >
 
@@ -172,8 +208,8 @@ export const ViewAchievementsPage = () => {
         }}
       >
         {
-          filteredAchievements.length > 0 ? (
-            filteredAchievements.map((achievement, index) => (
+          paginatedAchievements.length > 0 ? (
+            paginatedAchievements.map((achievement, index) => (
               <motion.div
                 key={achievement.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -196,6 +232,29 @@ export const ViewAchievementsPage = () => {
         }
       </motion.div >
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 'var(--spacing-4)', marginTop: 'var(--spacing-8)' }}>
+          <Button
+            variant="secondary"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(p => p - 1)}
+          >
+            Previous
+          </Button>
+          <span style={{ color: 'var(--text-light)', fontSize: '0.875rem' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(p => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       {/* Certificate Modal */}
       < Modal
         isOpen={!!selectedAchievement}
@@ -205,7 +264,7 @@ export const ViewAchievementsPage = () => {
       >
         {selectedAchievement && (
           <div style={{ textAlign: 'center', padding: 'var(--spacing-4)' }}>
-            <div style={{
+            <div id="certificate-content" style={{
               width: '100%',
               aspectRatio: '1.414', /* A4 Ratio */
               background: 'var(--bg-surface)',
@@ -251,7 +310,7 @@ export const ViewAchievementsPage = () => {
               </Button>
               <Button
                 variant="primary"
-                onClick={() => addToast('Downloading PDF certificate...', 'success')}
+                onClick={handleDownloadPDF}
                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}
               >
                 <Download size={16} />

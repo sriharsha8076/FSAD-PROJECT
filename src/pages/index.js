@@ -2,6 +2,7 @@ export { LandingPage } from './LandingPage';
 export { LoginPage } from './LoginPage';
 export { RegisterPage } from './RegisterPage';
 export { AdminDashboard } from './AdminDashboard';
+export { SuperAdminDashboard } from './SuperAdminDashboard';
 export { AddAchievementPage } from './AddAchievementPage';
 export { ViewAchievementsPage } from './ViewAchievementsPage';
 export { StudentsPage } from './StudentsPage';

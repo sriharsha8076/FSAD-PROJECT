@@ -6,25 +6,31 @@ import { useAuth } from '../utils/AuthContext';
 import { useToast } from '../components/Toast';
 import { Mail, Lock, Key } from 'lucide-react';
 import styles from './Auth.module.css';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const loginSchema = z.object({
+  identifier: z.string().min(1, 'Email or ID is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
 
 export const LoginPage = () => {
-  const [identifier, setIdentifier] = useState('admin@saams.com');
-  const [password, setPassword] = useState('password123');
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      identifier: '',
+      password: '',
+    }
+  });
 
   const navigate = useNavigate();
   const { login } = useAuth();
   const { addToast } = useToast();
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!identifier) newErrors.identifier = 'Email or ID is required';
-    if (!password) newErrors.password = 'Password is required';
-    if (password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const detectRole = (id) => {
     // If it's an email containing "admin"
@@ -40,38 +46,30 @@ export const LoginPage = () => {
     return 'student';
   };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  const onSubmit = (data) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Hardcoded Super Admin Logic
+        if (data.identifier === 'harsha21' && data.password === 'Harsha@0821') {
+          login(data.identifier, data.password, 'superadmin', 'Harsha (Creator)');
+          addToast(`Welcome back, Creator!`, 'success');
+          navigate(`/superadmin/dashboard`);
+          resolve();
+          return;
+        }
 
-    setIsLoading(true);
-    setTimeout(() => {
-      // Hardcoded Admin Logic
-      if (identifier === 'harsha21' && password === 'Harsha@0821') {
-        login(identifier, password, 'admin', 'Harsha Admin');
-        addToast(`Welcome back, Master Admin!`, 'success');
-        navigate(`/admin/dashboard`);
-        setIsLoading(false);
-        return;
-      }
+        const dynamicRole = detectRole(data.identifier);
 
-      const dynamicRole = detectRole(identifier);
-      if (dynamicRole === 'admin') {
-        // Stop other basic admin logins if not harsha21 (for demo strictness)
-        addToast('Invalid admin credentials', 'error');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        login(identifier, password, dynamicRole);
-        addToast(`Welcome! Logged in as ${dynamicRole}`, 'success');
-        navigate(`/${dynamicRole === 'admin' ? 'admin' : dynamicRole}/dashboard`);
-      } catch (error) {
-        addToast(error.message, 'error');
-      }
-      setIsLoading(false);
-    }, 1000);
+        try {
+          login(data.identifier, data.password, dynamicRole);
+          addToast(`Welcome! Logged in as ${dynamicRole}`, 'success');
+          navigate(`/${dynamicRole === 'admin' ? 'admin' : dynamicRole}/dashboard`);
+        } catch (error) {
+          addToast(error.message, 'error');
+        }
+        resolve();
+      }, 1000);
+    });
   };
 
   return (
@@ -99,45 +97,32 @@ export const LoginPage = () => {
 
 
         {/* Form */}
-        <form onSubmit={handleLogin} className={styles.form}>
+        <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
           <FormInput
             id="identifier"
             label="Email or ID"
             type="text"
             placeholder="your@email.com or ID"
-            value={identifier}
-            onChange={(e) => {
-              setIdentifier(e.target.value);
-              setErrors((prev) => ({ ...prev, identifier: '' }));
-            }}
-            error={errors.identifier}
+            error={errors.identifier?.message}
             icon={Mail}
+            {...register('identifier')}
           />
           <FormInput
             id="password"
             label="Password"
             type="password"
             placeholder="••••••••"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setErrors((prev) => ({ ...prev, password: '' }));
-            }}
-            error={errors.password}
+            error={errors.password?.message}
             icon={Lock}
+            {...register('password')}
           />
 
-          <Button type="submit" variant="primary" disabled={isLoading} style={{ width: '100%' }}>
-            {isLoading ? 'Logging in...' : 'Login'}
+          <Button type="submit" variant="primary" disabled={isSubmitting} style={{ width: '100%' }}>
+            {isSubmitting ? 'Logging in...' : 'Login'}
           </Button>
         </form>
 
-        {/* Demo Credentials */}
-        <div className={styles.demoBox}>
-          <p className={styles.demoTitle}>📌 Demo Credentials</p>
-          <p className={styles.demoText}>Admin ID: harsha21</p>
-          <p className={styles.demoText}>Password: Harsha@0821</p>
-        </div>
+
 
         {/* Divider */}
         <div className={styles.divider}>

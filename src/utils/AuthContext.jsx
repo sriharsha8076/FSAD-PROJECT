@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }) => {
       photo: null,
       bio: 'Passionate learner and achiever',
       createdAt: new Date().toISOString(),
+      adminId: userData.role === 'mentor' ? userData.adminId : null,
     };
 
     const newDB = [...usersDB, newUser];
@@ -43,6 +44,7 @@ export const AuthProvider = ({ children }) => {
       dob: userData.dob,
       mobileNo: userData.mobileNo,
       createdAt: newUser.createdAt,
+      adminId: newUser.adminId,
       isAuthenticated: true
     };
     setUser(sessionUser);
@@ -51,19 +53,51 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = (identifier, password, role, name = '') => {
-    if (role === 'admin') {
+    if (role === 'superadmin') {
       const sessionUser = {
         id: identifier,
         email: `${identifier}@saams.com`,
-        role: 'admin',
-        name: name || 'Admin',
+        role: 'superadmin',
+        name: name || 'System Creator',
         photo: null,
-        bio: 'System Administrator',
+        bio: 'Master System Administrator',
         dob: '1990-01-01',
-        mobileNo: '+1 (555) 999-9999',
+        mobileNo: '+1 (555) 000-0000',
         createdAt: new Date().toISOString(),
         isAuthenticated: true
       };
+      setUser(sessionUser);
+      localStorage.setItem('user', JSON.stringify(sessionUser));
+      return sessionUser;
+    }
+
+    if (role === 'admin') {
+      // In the future this will check the DB for the admin.
+      // For now, allow dynamically logged in admin (created by superadmin) or fallback.
+      const foundAdmin = usersDB.find(u => (u.email === identifier || u.id === identifier) && u.role === 'admin');
+
+      let sessionUser;
+      if (foundAdmin) {
+        if (foundAdmin.password !== password) {
+          throw new Error('Incorrect password');
+        }
+        sessionUser = { ...foundAdmin, isAuthenticated: true };
+      } else {
+        // Fallback or demo admin
+        sessionUser = {
+          id: identifier,
+          email: `${identifier}@saams.com`,
+          role: 'admin',
+          name: name || 'Admin',
+          photo: null,
+          bio: 'University Administrator',
+          dob: '1990-01-01',
+          mobileNo: '+1 (555) 999-9999',
+          createdAt: new Date().toISOString(),
+          isAuthenticated: true,
+          mustChangePassword: false, // Default admin doesn't need to change
+        };
+      }
       setUser(sessionUser);
       localStorage.setItem('user', JSON.stringify(sessionUser));
       return sessionUser;
@@ -109,13 +143,47 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
   };
 
+  const createUniversityAdmin = (adminData) => {
+    // Check if ID already exists
+    if (usersDB.some(u => u.id === adminData.id)) {
+      throw new Error('An Admin with this ID already exists');
+    }
+
+    const newAdmin = {
+      ...adminData,
+      role: 'admin',
+      photo: null,
+      bio: 'University Administrator',
+      createdAt: new Date().toISOString(),
+      mustChangePassword: true,
+    };
+
+    const newDB = [...usersDB, newAdmin];
+    setUsersDB(newDB);
+    localStorage.setItem('saams_users_db', JSON.stringify(newDB));
+    return newAdmin;
+  };
+
+  const deleteUniversityAdmin = (adminId) => {
+    // Only allow deletion if the user exists and is an admin
+    const adminToDelete = usersDB.find(u => u.id === adminId && u.role === 'admin');
+    if (!adminToDelete) {
+      throw new Error('Admin not found');
+    }
+
+    const newDB = usersDB.filter(u => u.id !== adminId);
+    setUsersDB(newDB);
+    localStorage.setItem('saams_users_db', JSON.stringify(newDB));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, registerUser, updateUser }}>
+    <AuthContext.Provider value={{ user, usersDB, login, logout, registerUser, updateUser, createUniversityAdmin, deleteUniversityAdmin }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

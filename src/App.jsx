@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './utils/AuthContext';
 import { ToastProvider } from './components/Toast';
 import './index.css';
+import { ThemeProvider } from './utils/ThemeContext';
 // Member 1 - Harsha implemented routing structure
 // Layouts
 
@@ -17,6 +18,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage').then(module => ({ d
 const LoginPage = lazy(() => import('./pages/LoginPage').then(module => ({ default: module.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/RegisterPage').then(module => ({ default: module.RegisterPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard').then(module => ({ default: module.SuperAdminDashboard })));
 const AddAchievementPage = lazy(() => import('./pages/AddAchievementPage').then(module => ({ default: module.AddAchievementPage })));
 const ViewAchievementsPage = lazy(() => import('./pages/ViewAchievementsPage').then(module => ({ default: module.ViewAchievementsPage })));
 const StudentsPage = lazy(() => import('./pages/StudentsPage').then(module => ({ default: module.StudentsPage })));
@@ -43,6 +45,18 @@ const AppRoutes = () => {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <LoginPage />} />
         <Route path="/register" element={user ? <Navigate to={`/${user.role}/dashboard`} replace /> : <RegisterPage />} />
+
+        {/* Super Admin Routes */}
+        <Route
+          path="/superadmin/dashboard"
+          element={
+            <ProtectedRoute requiredRole="superadmin">
+              <DashboardLayout title="Super Admin Dashboard">
+                <SuperAdminDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Admin Routes */}
         <Route
@@ -177,7 +191,6 @@ const AppRoutes = () => {
   );
 };
 
-import { ThemeProvider } from './utils/ThemeContext';
 
 function App() {
   return (

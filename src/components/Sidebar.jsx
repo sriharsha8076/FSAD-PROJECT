@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, LayoutDashboard, Award, Users, FileText, BarChart3, Settings, LogOut, User, Plus, Eye } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Award, Users, FileText, BarChart3, Settings, LogOut, User, Plus, Eye, Shield } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../utils/AuthContext';
 import styles from './Sidebar.module.css';
@@ -30,7 +30,13 @@ export const Sidebar = () => {
     { label: 'Profile', icon: User, path: '/student/profile' },
   ];
 
-  const menuItems = user?.role === 'admin' ? adminMenuItems : studentMenuItems;
+  const superadminMenuItems = [
+    { label: 'System Overview', icon: Shield, path: '/superadmin/dashboard' },
+  ];
+
+  let menuItems = studentMenuItems;
+  if (user?.role === 'admin') menuItems = adminMenuItems;
+  if (user?.role === 'superadmin') menuItems = superadminMenuItems;
 
   const sidebarClass = `
     ${styles.sidebar} 

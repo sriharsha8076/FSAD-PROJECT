@@ -3,12 +3,46 @@ import { motion } from 'framer-motion';
 import { StatCard, ChartCard, AchievementCard, Card, FormInput } from '../components';
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { monthlyAchievementsData, categoryDistributionData, statisticsData, mockAchievements } from '../data/mockData';
-import { Award, Users, Flag, MapPin, Search } from 'lucide-react';
+import { Award, Users, Flag, MapPin, Search, Lock, Key } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useToast } from '../components/Toast';
+import { Button } from '../components';
+
+const passwordSchema = z.object({
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
 
 export const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { addToast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(passwordSchema)
+  });
+
+  const onChangePasswordSubmit = async (data) => {
+    setIsUpdating(true);
+    try {
+      updateUser({ password: data.password, mustChangePassword: false });
+      addToast('Password updated successfully! Welcome to your dashboard.', 'success');
+    } catch (err) {
+      addToast('Failed to update password.', 'error');
+    }
+    setIsUpdating(false);
+  };
 
   const statIcons = {
     'award': Award,
@@ -24,6 +58,50 @@ export const AdminDashboard = () => {
     achievement.activity.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (user?.mustChangePassword) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--spacing-4)' }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{ width: '100%', maxWidth: '400px' }}
+        >
+          <Card style={{ padding: 'var(--spacing-8)' }}>
+            <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-6)' }}>
+              <div style={{ display: 'inline-flex', padding: 'var(--spacing-4)', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', marginBottom: 'var(--spacing-4)' }}>
+                <Lock size={32} color="var(--danger)" />
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-light)', margin: '0 0 var(--spacing-2) 0' }}>Security Required</h2>
+              <p style={{ color: 'var(--text-muted)', margin: 0 }}>Please set a new personal password before accessing the dashboard.</p>
+            </div>
+
+            <form onSubmit={handleSubmit(onChangePasswordSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
+              <FormInput
+                label="New Password"
+                type="password"
+                placeholder="••••••••"
+                error={errors.password?.message}
+                icon={Key}
+                {...register('password')}
+              />
+              <FormInput
+                label="Confirm Password"
+                type="password"
+                placeholder="••••••••"
+                error={errors.confirmPassword?.message}
+                icon={Key}
+                {...register('confirmPassword')}
+              />
+              <Button type="submit" variant="primary" disabled={isUpdating} style={{ width: '100%', marginTop: 'var(--spacing-4)' }}>
+                {isUpdating ? 'Updating...' : 'Set New Password'}
+              </Button>
+            </form>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Top Bar */}
@@ -34,8 +112,10 @@ export const AdminDashboard = () => {
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--spacing-4)' }}>
           <div>
-            <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: 'var(--text-light)', margin: 0 }}>Dashboard</h1>
-            <p style={{ color: 'var(--text-muted)', marginTop: 'var(--spacing-1)', margin: 0 }}>Welcome back, {user?.name || 'Admin'}! Here's your achievement overview</p>
+            <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: 'var(--text-light)', margin: 0 }}>University Dashboard</h1>
+            <p style={{ color: 'var(--text-muted)', marginTop: 'var(--spacing-1)', margin: 0 }}>
+              Welcome back, {user?.name || 'Administrator'}! Overview for University ID: <strong>{user?.id || 'Admin'}</strong>
+            </p>
           </div>
           <div style={{ width: '100%', maxWidth: '300px' }}>
             <FormInput

@@ -7,6 +7,8 @@ import { Award, Filter, Download, Calendar, Plus } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/AuthContext';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export const StudentDashboard = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
@@ -28,7 +30,68 @@ export const StudentDashboard = () => {
     { name: 'Team Player', description: 'Sports Category' },
     { name: 'Tech Master', description: 'Technical Excellence' },
   ];
-  //1234
+
+  const handleDownloadCertificate = async (achievement) => {
+    addToast(`Generating certificate for ${achievement.activity}...`, 'info');
+
+    // Create a temporary hidden div to render the certificate
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '-9999px';
+    document.body.appendChild(tempDiv);
+
+    // Simple HTML structure for the certificate
+    tempDiv.innerHTML = `
+      <div id="temp-cert" style="
+        width: 800px;
+        height: 565px;
+        background: #1e1e2d;
+        color: white;
+        padding: 40px;
+        font-family: sans-serif;
+        text-align: center;
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        position: relative;
+        box-sizing: border-box;
+      ">
+        <div style="font-size: 60px; margin-bottom: 20px;">🎓</div>
+        <h2 style="font-size: 36px; margin: 0 0 20px 0; color: #fff;">Certificate of Achievement</h2>
+        <p style="color: #94a3b8; font-size: 18px; margin: 0 0 10px 0;">This is to certify that</p>
+        <h3 style="font-size: 28px; color: #3b82f6; margin: 0 0 30px 0;">${achievement.studentName || student.name}</h3>
+        <p style="color: #94a3b8; font-size: 18px; margin: 0 0 10px 0;">has successfully achieved</p>
+        <h4 style="font-size: 24px; color: #fff; margin: 0 0 30px 0;">${achievement.position} in ${achievement.activity}</h4>
+        <div style="margin-top: 20px;">
+          <span style="padding: 4px 12px; background: #151521; border: 1px solid #2a2a3c; border-radius: 20px; font-size: 14px; margin-right: 10px;">${achievement.category}</span>
+          <span style="padding: 4px 12px; background: #151521; border: 1px solid #2a2a3c; border-radius: 20px; font-size: 14px;">${achievement.level} Level</span>
+        </div>
+        <div style="position: absolute; bottom: 40px; right: 40px; text-align: right;">
+          <p style="color: #94a3b8; font-size: 14px; margin: 0 0 5px 0;">Date Awarded</p>
+          <p style="color: #fff; font-size: 16px; font-weight: bold; margin: 0;">${new Date(achievement.date).toLocaleDateString()}</p>
+        </div>
+      </div>
+    `;
+
+    try {
+      const certElement = document.getElementById('temp-cert');
+      const canvas = await html2canvas(certElement, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('l', 'mm', 'a4');
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${achievement.studentName || student.name}_${achievement.activity}_Certificate.pdf`);
+      addToast('Certificate downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      addToast('Failed to generate PDF.', 'error');
+    } finally {
+      document.body.removeChild(tempDiv);
+    }
+  };
 
   return (
     <div style={{ flex: 1, padding: 'var(--spacing-4)' }}>
@@ -267,7 +330,7 @@ export const StudentDashboard = () => {
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0 0 var(--spacing-4) 0' }}>{new Date(achievement.date).toLocaleDateString()}</p>
                 <Button
                   variant="secondary"
-                  onClick={() => addToast(`Downloading ${achievement.activity} certificate...`, 'success')}
+                  onClick={() => handleDownloadCertificate(achievement)}
                   style={{ width: '100%', fontSize: '0.875rem' }}
                 >
                   Download

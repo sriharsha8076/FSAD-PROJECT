@@ -4,6 +4,8 @@ import { Card, ChartCard, StatCard, Button, Table } from '../components';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Download, Calendar, TrendingUp } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export const ReportsPage = () => {
   const { addToast } = useToast();
@@ -60,8 +62,54 @@ export const ReportsPage = () => {
     },
   ];
 
+  const handleDownloadReport = async () => {
+    const reportElement = document.getElementById('report-content');
+    if (!reportElement) return;
+
+    addToast('Generating full PDF report...', 'info');
+    try {
+      // Temporarily hide the download button to prevent it from appearing in the PDF
+      const downloadBtn = document.getElementById('download-report-btn');
+      if (downloadBtn) downloadBtn.style.display = 'none';
+
+      const canvas = await html2canvas(reportElement, {
+        scale: 2,
+        backgroundColor: '#151521' // Match the dark background
+      });
+
+      if (downloadBtn) downloadBtn.style.display = 'flex';
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait A4
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      let position = 0;
+      let heightLeft = pdfHeight;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Handle multi-page PDF
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`SAAMS_Analytics_Report_${dateRange}.pdf`);
+      addToast('Report downloaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error generating PDF report:', error);
+      addToast('Failed to generate PDF report.', 'error');
+    }
+  };
+
   return (
-    <div style={{ flex: 1, padding: 'var(--spacing-4)' }}>
+    <div id="report-content" style={{ flex: 1, padding: 'var(--spacing-4)', background: 'var(--bg-dark)' }}>
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -74,8 +122,9 @@ export const ReportsPage = () => {
             <p style={{ color: 'var(--text-muted)', marginTop: 'var(--spacing-1)', margin: 0 }}>Comprehensive achievement analytics and statistics</p>
           </div>
           <Button
+            id="download-report-btn"
             variant="primary"
-            onClick={() => addToast('Report generation started...', 'info')}
+            onClick={handleDownloadReport}
             style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}
           >
             <Download size={16} />

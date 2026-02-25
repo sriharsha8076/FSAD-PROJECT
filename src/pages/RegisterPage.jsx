@@ -7,84 +7,98 @@ import { useToast } from '../components/Toast';
 import { Mail, Lock, User, Key, Calendar, Phone, Hash } from 'lucide-react';
 import { generateStudentId, generateMentorId, previewStudentId, previewMentorId } from '../utils/idGenerator';
 import styles from './Auth.module.css';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const registerSchema = z.object({
+  firstName: z.string().min(1, 'First Name is required'),
+  middleName: z.string().optional(),
+  lastName: z.string().min(1, 'Last Name is required'),
+  dob: z.string().min(1, 'Date of Birth is required'),
+  mobileNo: z.string().min(10, 'Valid Mobile Number is required'),
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string(),
+  adminId: z.string().optional(),
+  agreeToTerms: z.literal(true, {
+    errorMap: () => ({ message: 'You must agree to terms' }),
+  }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
 
 export const RegisterPage = () => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    middleName: '',
-    lastName: '',
-    dob: '',
-    mobileNo: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    agreeToTerms: false,
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      firstName: '',
+      middleName: '',
+      lastName: '',
+      dob: '',
+      mobileNo: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      adminId: '',
+      agreeToTerms: false,
+    }
   });
+
   const [selectedRole, setSelectedRole] = useState('student');
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [previewId, setPreviewId] = useState('');
+  const [customError, setCustomError] = useState('');
+
+  const firstName = watch('firstName');
+  const middleName = watch('middleName');
+  const lastName = watch('lastName');
 
   // Update live preview ID
   useEffect(() => {
-    const fullName = `${formData.firstName} ${formData.middleName ? formData.middleName + ' ' : ''}${formData.lastName}`.trim();
+    const fn = firstName || '';
+    const mn = middleName ? middleName + ' ' : '';
+    const ln = lastName || '';
+    const fullName = `${fn} ${mn}${ln}`.trim();
+
     if (selectedRole === 'student') {
       setPreviewId(previewStudentId());
     } else if (selectedRole === 'mentor') {
       setPreviewId(previewMentorId(fullName));
     }
-  }, [selectedRole, formData.firstName, formData.middleName, formData.lastName]);
+  }, [selectedRole, firstName, middleName, lastName]);
 
   const navigate = useNavigate();
   const { registerUser } = useAuth();
   const { addToast } = useToast();
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.firstName) newErrors.firstName = 'First Name is required';
-    if (!formData.lastName) newErrors.lastName = 'Last Name is required';
-    if (!formData.dob) newErrors.dob = 'Date of Birth is required';
-    if (!formData.mobileNo) newErrors.mobileNo = 'Mobile Number is required';
-    if (!formData.email) newErrors.email = 'Email is required';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    if (!formData.agreeToTerms) newErrors.agreeToTerms = 'You must agree to terms';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const onSubmit = (data) => {
+    setCustomError('');
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const fn = data.firstName;
+        const mn = data.middleName ? data.middleName + ' ' : '';
+        const ln = data.lastName;
+        const fullName = `${fn} ${mn}${ln}`.trim();
 
-    setIsLoading(true);
-    setTimeout(() => {
-      const fullName = `${formData.firstName} ${formData.middleName ? formData.middleName + ' ' : ''}${formData.lastName}`.trim();
+        const user = registerUser({
+          ...data,
+          name: fullName,
+          role: selectedRole,
+          adminId: selectedRole === 'mentor' ? data.adminId : null
+        });
 
-      const user = registerUser({
-        ...formData,
-        name: fullName,
-        role: selectedRole
-      });
-
-      addToast(`Registration successful! Your ID is: ${user.id}`, 'success');
-      navigate(`/${selectedRole === 'admin' ? 'admin' : selectedRole}/dashboard`);
-      setIsLoading(false);
-    }, 1000);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  const handleCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: checked }));
-    setErrors((prev) => ({ ...prev, [name]: '' }));
+        addToast(`Registration successful! Your ID is: ${user.id}`, 'success');
+        navigate(`/${selectedRole === 'admin' ? 'admin' : selectedRole}/dashboard`);
+        resolve();
+      }, 1000);
+    });
   };
 
   return (
@@ -130,7 +144,7 @@ export const RegisterPage = () => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleRegister} className={styles.form}>
+        <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
           <FormInput
             id="previewId"
             label="Unique ID (Auto-Generated)"
@@ -140,28 +154,38 @@ export const RegisterPage = () => {
             icon={Hash}
           />
 
+          {selectedRole === 'mentor' && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+              <FormInput
+                id="adminId"
+                label="University Admin ID (Optional)"
+                type="text"
+                placeholder="e.g. harsha21 (Leave blank if independent)"
+                error={errors.adminId?.message || customError}
+                icon={Hash}
+                {...register('adminId')}
+              />
+            </motion.div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <FormInput
               id="firstName"
               label="First Name"
               type="text"
               placeholder="John"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              error={errors.firstName}
+              error={errors.firstName?.message}
               icon={User}
+              {...register('firstName')}
             />
             <FormInput
               id="middleName"
               label="Middle Name"
               type="text"
               placeholder="Middle (Opt)"
-              name="middleName"
-              value={formData.middleName}
-              onChange={handleInputChange}
-              error={errors.middleName}
+              error={errors.middleName?.message}
               icon={User}
+              {...register('middleName')}
             />
           </div>
           <FormInput
@@ -169,43 +193,35 @@ export const RegisterPage = () => {
             label="Last Name"
             type="text"
             placeholder="Doe"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleInputChange}
-            error={errors.lastName}
+            error={errors.lastName?.message}
             icon={User}
+            {...register('lastName')}
           />
           <FormInput
             id="dob"
             label="Date of Birth"
             type="date"
-            name="dob"
-            value={formData.dob}
-            onChange={handleInputChange}
-            error={errors.dob}
+            error={errors.dob?.message}
             icon={Calendar}
+            {...register('dob')}
           />
           <FormInput
             id="mobileNo"
             label="Mobile Number"
             type="tel"
             placeholder="+1 (555) 000-0000"
-            name="mobileNo"
-            value={formData.mobileNo}
-            onChange={handleInputChange}
-            error={errors.mobileNo}
+            error={errors.mobileNo?.message}
             icon={Phone}
+            {...register('mobileNo')}
           />
           <FormInput
             id="email"
             label="Email Address"
             type="email"
             placeholder="your@email.com"
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            error={errors.email}
+            error={errors.email?.message}
             icon={Mail}
+            {...register('email')}
           />
 
           <FormInput
@@ -213,22 +229,18 @@ export const RegisterPage = () => {
             label="Password"
             type="password"
             placeholder="••••••••"
-            name="password"
-            value={formData.password}
-            onChange={handleInputChange}
-            error={errors.password}
+            error={errors.password?.message}
             icon={Lock}
+            {...register('password')}
           />
           <FormInput
             id="confirmPassword"
             label="Confirm Password"
             type="password"
             placeholder="••••••••"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleInputChange}
-            error={errors.confirmPassword}
+            error={errors.confirmPassword?.message}
             icon={Key}
+            {...register('confirmPassword')}
           />
 
           {/* Terms Agreement */}
@@ -237,9 +249,7 @@ export const RegisterPage = () => {
               <input
                 type="checkbox"
                 id="agreeToTerms"
-                name="agreeToTerms"
-                checked={formData.agreeToTerms}
-                onChange={handleCheckboxChange}
+                {...register('agreeToTerms')}
                 style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
               />
               <label htmlFor="agreeToTerms" style={{ fontSize: '0.875rem', color: 'var(--text-main)', cursor: 'pointer' }}>
@@ -247,12 +257,12 @@ export const RegisterPage = () => {
               </label>
             </div>
             {errors.agreeToTerms && (
-              <p style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '4px' }}>{errors.agreeToTerms}</p>
+              <p style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '4px' }}>{errors.agreeToTerms.message}</p>
             )}
           </div>
 
-          <Button type="submit" variant="primary" disabled={isLoading} style={{ width: '100%' }}>
-            {isLoading ? 'Creating Account...' : 'Create Account'}
+          <Button type="submit" variant="primary" disabled={isSubmitting} style={{ width: '100%' }}>
+            {isSubmitting ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
 
