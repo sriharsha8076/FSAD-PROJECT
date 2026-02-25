@@ -34,9 +34,16 @@ export const Sidebar = () => {
     { label: 'System Overview', icon: Shield, path: '/superadmin/dashboard' },
   ];
 
+  const mentorMenuItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, path: '/mentor/dashboard' },
+    { label: 'Student Achievements', icon: Award, path: '/mentor/achievements' },
+    { label: 'Profile', icon: User, path: '/profile' },
+  ];
+
   let menuItems = studentMenuItems;
   if (user?.role === 'admin') menuItems = adminMenuItems;
   if (user?.role === 'superadmin') menuItems = superadminMenuItems;
+  if (user?.role === 'mentor') menuItems = mentorMenuItems;
 
   const sidebarClass = `
     ${styles.sidebar} 

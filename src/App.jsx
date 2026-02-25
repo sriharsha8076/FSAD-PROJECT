@@ -27,6 +27,7 @@ const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(module => 
 const StudentDashboard = lazy(() => import('./pages/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
+const MentorDashboard = lazy(() => import('./pages/MentorDashboard').then(module => ({ default: module.MentorDashboard })));
 
 // Loading Component
 const PageLoader = () => (
@@ -157,6 +158,28 @@ const AppRoutes = () => {
             <ProtectedRoute>
               <DashboardLayout title="My Profile">
                 <ProfilePage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Mentor Routes */}
+        <Route
+          path="/mentor/dashboard"
+          element={
+            <ProtectedRoute requiredRole="mentor">
+              <DashboardLayout title="Mentor Dashboard">
+                <MentorDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mentor/achievements"
+          element={
+            <ProtectedRoute requiredRole="mentor">
+              <DashboardLayout title="Student Achievements">
+                <ViewAchievementsPage />
               </DashboardLayout>
             </ProtectedRoute>
           }

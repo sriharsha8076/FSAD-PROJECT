@@ -11,3 +11,4 @@ export { AnalyticsPage } from './AnalyticsPage';
 export { StudentDashboard } from './StudentDashboard';
 export { ProfilePage } from './ProfilePage';
 export { SettingsPage } from './SettingsPage';
+export { MentorDashboard } from './MentorDashboard';

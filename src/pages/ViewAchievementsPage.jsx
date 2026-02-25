@@ -12,6 +12,8 @@ export const ViewAchievementsPage = () => {
   const { user } = useAuth();
   const { addToast } = useToast();
   const isAdmin = user?.role === 'admin';
+  const isMentor = user?.role === 'mentor';
+  const isSuperAdmin = user?.role === 'superadmin';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -23,8 +25,9 @@ export const ViewAchievementsPage = () => {
   const categories = ['Sports', 'Technical', 'Cultural', 'Other'];
   const levels = ['Participation', 'College', 'State', 'National', 'International'];
 
-  // Mock data tailored for the student view
-  const baseAchievements = isAdmin ? mockAchievements : mockAchievements.slice(0, 3);
+  // Mock data tailored for the student view (Mentors and Admins see all)
+  const canSeeAll = isAdmin || isMentor || isSuperAdmin;
+  const baseAchievements = canSeeAll ? mockAchievements : mockAchievements.slice(0, 3);
 
   const filteredAchievements = baseAchievements.filter((achievement) => {
     const matchesSearch =
@@ -77,10 +80,10 @@ export const ViewAchievementsPage = () => {
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--spacing-4)' }}>
           <div>
             <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: 'var(--text-light)', margin: 0 }}>
-              {isAdmin ? 'View Achievements' : 'My Achievements'}
+              {canSeeAll ? 'Student Achievements' : 'My Achievements'}
             </h1>
             <p style={{ color: 'var(--text-muted)', marginTop: 'var(--spacing-1)', margin: 0 }}>
-              {isAdmin ? 'Browse all student achievements' : 'Browse your recorded achievements'}
+              {canSeeAll ? 'Browse all student achievements' : 'Browse your recorded achievements'}
             </p>
           </div>
           <Button
@@ -111,7 +114,7 @@ export const ViewAchievementsPage = () => {
             <div style={{ gridColumn: '1 / -1' }}>
               <FormInput
                 type="text"
-                placeholder={isAdmin ? "Search by student name or activity..." : "Search by activity name..."}
+                placeholder={canSeeAll ? "Search by student name or activity..." : "Search by activity name..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 icon={Search}

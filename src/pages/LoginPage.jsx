@@ -61,9 +61,10 @@ export const LoginPage = () => {
         const dynamicRole = detectRole(data.identifier);
 
         try {
-          login(data.identifier, data.password, dynamicRole);
-          addToast(`Welcome! Logged in as ${dynamicRole}`, 'success');
-          navigate(`/${dynamicRole === 'admin' ? 'admin' : dynamicRole}/dashboard`);
+          const user = login(data.identifier, data.password, dynamicRole);
+          const actualRole = user.role;
+          addToast(`Welcome! Logged in as ${actualRole}`, 'success');
+          navigate(`/${actualRole === 'admin' ? 'admin' : actualRole}/dashboard`);
         } catch (error) {
           addToast(error.message, 'error');
         }
